@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Wake Up — Voice Alarm</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14162E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --midnight:#14162E;
+    --dusk:#232349;
+    --panel:#2C2A52;
+    --amber:#FFB454;
+    --coral:#FF6B5E;
+    --cream:#F6F1E4;
+    --lavender:#9C97C4;
+    --line: rgba(246,241,228,0.08);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Inter',sans-serif;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #3a3570 0%, var(--midnight) 55%);
+    color:var(--cream);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .phone{
+    width:100%;
+    max-width:400px;
+    background: linear-gradient(180deg, var(--dusk) 0%, var(--midnight) 100%);
+    border-radius:36px;
+    padding:28px 22px 22px;
+    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.6), 0 0 0 1px var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .brand h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-optical-sizing:auto;
+    font-size:28px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .brand span{
+    color:var(--amber);
+  }
+  .brand small{
+    color:var(--lavender);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  }
+
+  /* Sunrise arc — signature element */
+  .arc-wrap{
+    position:relative;
+    margin:18px 0 10px;
+    height:140px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  svg.arc{ position:absolute; bottom:0; left:0; width:100%; height:100%; }
+  .arc-bg{ stroke:rgba(246,241,228,0.08); fill:none; stroke-width:10; stroke-linecap:round; }
+  .arc-fill{ fill:none; stroke-width:10; stroke-linecap:round; stroke:url(#sunriseGrad); transition:stroke-dashoffset 0.6s ease; }
+  .arc-sun{ transition: cx 0.6s ease, cy 0.6s ease; filter: drop-shadow(0 0 10px rgba(255,180,84,0.8)); }
+  .arc-center{
+    position:relative;
+    text-align:center;
+    z-index:2;
+    padding-bottom:8px;
+  }
+  .now-time{
+    font-family:'Space Mono', monospace;
+    font-size:15px;
+    color:var(--lavender);
+    letter-spacing:0.05em;
+  }
+  .next-label{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    color:var(--cream);
+    margin-top:2px;
+  }
+  .next-time{
+    font-family:'Space Mono', monospace;
+    font-weight:700;
+    font-size:34px;
+    color:var(--amber);
+    line-height:1;
+  }
+
+  /* Mic button */
+  .mic-row{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin:18px 0 22px;
+  }
+  .mic-btn{
+    width:78px;
+    height:78px;
+    border-radius:50%;
+    border:none;
+    background: linear-gradient(145deg, var(--amber), var(--coral));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    position:relative;
+    box-shadow: 0 10px 30px -8px rgba(255,107,94,0.5);
+  }
+  .mic-btn svg{ width:30px; height:30px; }
+  .mic-btn.listening{ animation: pulse 1.4s ease-out infinite; }
+  .pulse-ring{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    border:2px solid var(--coral);
+    opacity:0;
+  }
+  .mic-btn.listening .pulse-ring{ animation: ring 1.4s ease-out infinite; }
+  @keyframes pulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.05); }
+  }
+  @keyframes ring{
+    0%{ transform:scale(1); opacity:0.6; }
+    100%{ transform:scale(1.9); opacity:0; }
+  }
+  .mic-hint{
+    margin-top:10px;
+    font-size:12.5px;
+    color:var(--lavender);
+    text-align:center;
+    min-height:34px;
+    line-height:1.4;
+    padding:0 10px;
+  }
+  .mic-hint b{ color:var(--cream); font-weight:600; }
+
+  .type-fallback{
+    display:flex;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .type-fallback input{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 12px;
+    color:var(--cream);
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    outline:none;
+  }
+  .type-fallback input::placeholder{ color:var(--lavender); }
+  .type-fallback button{
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--amber);
+    border-radius:12px;
+    padding:0 16px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+
+  .section-label{
+    font-size:11px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--lavender);
+    margin:20px 0 10px;
+    display:flex;
+    justify-content:space-between;
+  }
+
+  .alarm-list{ display:flex; flex-direction:column; gap:10px; max-height:260px; overflow-y:auto; padding-right:2px; }
+  .alarm-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:14px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .alarm-card.off{ opacity:0.45; }
+  .alarm-time{
+    font-family:'Space Mono', monospace;
+    font-size:22px;
+    font-weight:700;
+  }
+  .alarm-meta{ display:flex; flex-direction:column; gap:2px; }
+  .alarm-label{ font-size:12px; color:var(--lavender); }
+  .alarm-actions{ display:flex; align-items:center; gap:10px; }
+  .toggle{
+    width:42px; height:24px; border-radius:99px;
+    background:rgba(246,241,228,0.12);
+    position:relative;
+    cursor:pointer;
+    border:none;
+    flex-shrink:0;
+  }
+  .toggle.on{ background:var(--amber); }
+  .toggle::after{
+    content:''; position:absolute; top:3px; left:3px;
+    width:18px; height:18px; border-radius:50%; background:var(--cream);
+    transition: left 0.2s ease;
+  }
+  .toggle.on::after{ left:21px; background:#1B1F3B; }
+  .delete-btn{
+    background:none; border:none; color:var(--lavender);
+    cursor:pointer; font-size:17px; line-height:1; padding:4px;
+  }
+  .delete-btn:hover{ color:var(--coral); }
+
+  .empty{
+    text-align:center; color:var(--lavender); font-size:13px;
+    padding:24px 10px; border:1px dashed var(--line); border-radius:16px;
+  }
+
+  .ringing-overlay{
+    position:fixed; inset:0; background:linear-gradient(180deg,#3a3570,var(--midnight));
+    display:none; align-items:center; justify-content:center; flex-direction:column;
+    z-index:50; text-align:center; padding:30px;
+  }
+  .ringing-overlay.show{ display:flex; }
+  .ringing-overlay .big-time{ font-family:'Space Mono',monospace; font-size:64px; font-weight:700; color:var(--amber); }
+  .ringing-overlay .label{ font-family:'Fraunces',serif; font-size:20px; margin:6px 0 30px; }
+  .stop-btn{
+    background:var(--coral); color:var(--midnight); border:none;
+    padding:16px 40px; border-radius:99px; font-weight:700; font-size:16px; cursor:pointer;
+  }
+  .snooze-btn{
+    margin-top:14px; background:none; border:1px solid var(--line); color:var(--cream);
+    padding:10px 28px; border-radius:99px; font-size:14px; cursor:pointer;
+  }
+
+  ::-webkit-scrollbar{ width:5px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:10px; }
+
+  .sr-note{ font-size:11px; color:var(--coral); text-align:center; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="brand">
+    <h1>Wake<span>Up</span></h1>
+    <small id="dateLabel"></small>
+  </div>
+
+  <div class="arc-wrap">
+    <svg class="arc" viewBox="0 0 200 120">
+      <defs>
+        <linearGradient id="sunriseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FF6B5E"/>
+          <stop offset="100%" stop-color="#FFB454"/>
+        </linearGradient>
+      </defs>
+      <path class="arc-bg" d="M 15 110 A 85 85 0 0 1 185 110"/>
+      <path class="arc-fill" id="arcFill" d="M 15 110 A 85 85 0 0 1 185 110" stroke-dasharray="267" stroke-dashoffset="267"/>
+      <circle class="arc-sun" id="arcSun" cx="15" cy="110" r="6" fill="#FFB454"/>
+    </svg>
+    <div class="arc-center">
+      <div class="now-time" id="nowTime">--:--:--</div>
+      <div class="next-label" id="nextLabel">No alarm set</div>
+      <div class="next-time" id="nextTime"></div>
+    </div>
+  </div>
+
+  <div class="mic-row">
+    <button class="mic-btn" id="micBtn" aria-label="Set alarm by voice">
+      <div class="pulse-ring"></div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="#14162E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+    </button>
+    <div class="mic-hint" id="micHint">Tap the mic and say <b>"Set alarm for 7 AM"</b></div>
+  </div>
+
+  <div class="type-fallback">
+    <input type="text" id="typeInput" placeholder='Or type: "wake me up at 6:30 am"'>
+    <button id="typeGo">Set</button>
+  </div>
+  <div class="sr-note" id="srNote"></div>
+
+  <div class="section-label"><span>Alarms</span><span id="countLabel"></span></div>
+  <div class="alarm-list" id="alarmList"></div>
+</div>
+
+<div class="ringing-overlay" id="ringOverlay">
+  <div class="big-time" id="ringTime">7:00</div>
+  <div class="label">Time to wake up ☀️</div>
+  <button class="stop-btn" id="stopBtn">Stop</button>
+  <button class="snooze-btn" id="snoozeBtn">Snooze 5 min</button>
+</div>
+
+<audio id="alarmAudio" loop>
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<script>
+// ---------- State ----------
+let alarms = JSON.parse(localStorage.getItem('wakeup_alarms') || '[]');
+let ringingAlarm = null;
+
+function saveAlarms(){ localStorage.setItem('wakeup_alarms', JSON.stringify(alarms)); }
+
+function fmt(h,m){
+  const period = h >= 12 ? 'PM' : 'AM';
+  let h12 = h % 12; if(h12===0) h12=12;
+  return `${h12}:${String(m).padStart(2,'0')} ${period}`;
+}
+
+function render(){
+  const list = document.getElementById('alarmList');
+  const countLabel = document.getElementById('countLabel');
+  countLabel.textContent = alarms.length ? `${alarms.length} set` : '';
+  if(alarms.length === 0){
+    list.innerHTML = `<div class="empty">No alarms yet — try the mic above.</div>`;
+  } else {
+    alarms.sort((a,b)=> (a.hour*60+a.minute) - (b.hour*60+b.minute));
+    list.innerHTML = alarms.map(a => `
+      <div class="alarm-card ${a.enabled ? '' : 'off'}" data-id="${a.id}">
+        <div>
+          <div class="alarm-time">${fmt(a.hour,a.minute)}</div>
+          <div class="alarm-label">${a.label || 'Alarm'}</div>
+        </div>
+        <div class="alarm-actions">
+          <button class="toggle ${a.enabled ? 'on':''}" data-toggle="${a.id}"></button>
+          <button class="delete-btn" data-delete="${a.id}">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  updateArc();
+}
+
+document.getElementById('alarmList').addEventListener('click', (e)=>{
+  const t = e.target.closest('[data-toggle]');
+  const d = e.target.closest('[data-delete]');
+  if(t){
+    const id = t.dataset.toggle;
+    alarms = alarms.map(a => a.id===id ? {...a, enabled: !a.enabled} : a);
+    saveAlarms(); render();
+  }
+  if(d){
+    const id = d.dataset.delete;
+    alarms = alarms.filter(a => a.id !== id);
+    saveAlarms(); render();
+  }
+});
+
+function addAlarm(hour, minute, label){
+  alarms.push({ id: Date.now()+'', hour, minute, label: label || 'Alarm', enabled: true });
+  saveAlarms(); render();
+}
+
+// ---------- Clock + sunrise arc ----------
+function updateClock(){
+  const now = new Date();
+  document.getElementById('nowTime').textContent = now.toLocaleTimeString([], {hour12:true});
+  document.getElementById('dateLabel').textContent = now.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+}
+
+function nextAlarmInfo(){
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  let best = null, bestDiff = Infinity;
+  alarms.filter(a=>a.enabled).forEach(a=>{
+    let diff = (a.hour*60+a.minute) - nowMin;
+    if(diff < 0) diff += 24*60;
+    if(diff < bestDiff){ bestDiff = diff; best = a; }
+  });
+  return best ? {alarm: best, minutesAway: bestDiff} : null;
+}
+
+function updateArc(){
+  const info = nextAlarmInfo();
+  const nextLabel = document.getElementById('nextLabel');
+  const nextTime = document.getElementById('nextTime');
+  const arcFill = document.getElementById('arcFill');
+  const arcSun = document.getElementById('arcSun');
+  const arcLen = 267;
+
+  if(!info){
+    nextLabel.textContent = 'No alarm set';
+    nextTime.textContent = '';
+    arcFill.style.strokeDashoffset = arcLen;
+    arcSun.setAttribute('cx', 15); arcSun.setAttribute('cy', 110);
+    return;
+  }
+  nextLabel.textContent = 'Next alarm';
+  nextTime.textContent = fmt(info.alarm.hour, info.alarm.minute);
+  // progress: within a 12h window before the alarm, how close are we (closer = more filled)
+  const windowMin = 12*60;
+  const progress = Math.max(0, Math.min(1, 1 - (info.minutesAway / windowMin)));
+  arcFill.style.strokeDashoffset = arcLen - (arcLen * progress);
+  // move sun along arc path roughly
+  const angle = Math.PI * (1 - progress); // 180deg -> 0deg
+  const cx = 100 - 85*Math.cos(angle);
+  const cy = 110 - 85*Math.sin(angle);
+  arcSun.setAttribute('cx', cx);
+  arcSun.setAttribute('cy', cy);
+}
+
+setInterval(()=>{
+  updateClock();
+  updateArc();
+  checkAlarms();
+}, 1000);
+updateClock();
+
+// ---------- Alarm firing ----------
+function checkAlarms(){
+  if(ringingAlarm) return;
+  const now = new Date();
+  alarms.filter(a=>a.enabled).forEach(a=>{
+    if(a.hour === now.getHours() && a.minute === now.getMinutes() && now.getSeconds() < 2){
+      fireAlarm(a);
+    }
+  });
+}
+
+function fireAlarm(a){
+  ringingAlarm = a;
+  document.getElementById('ringTime').textContent = fmt(a.hour, a.minute);
+  document.getElementById('ringOverlay').classList.add('show');
+  const audio = document.getElementById('alarmAudio');
+  audio.play().catch(()=>{});
+  if(navigator.vibrate) navigator.vibrate([400,200,400,200,400]);
+}
+
+document.getElementById('stopBtn').addEventListener('click', ()=>{
+  document.getElementById('ringOverlay').classList.remove('show');
+  document.getElementById('alarmAudio').pause();
+  ringingAlarm = null;
+});
+document.getElementById('snoozeBtn').addEventListener('click', ()=>{
+  document.getElementById('ringOverlay').classList.remove('show');
+  document.getElementById('alarmAudio').pause();
+  const a = ringingAlarm; ringingAlarm = null;
+  const snoozeTime = new Date(Date.now() + 5*60000);
+  addAlarm(snoozeTime.getHours(), snoozeTime.getMinutes(), (a.label||'Alarm')+' (snoozed)');
+});
+
+// ---------- Voice command parsing ----------
+function parseTimeFromSpeech(text){
+  text = text.toLowerCase().trim();
+
+  // "in 20 minutes" / "in 1 hour"
+  let m = text.match(/in\s+(\d+)\s*(minute|min|hour|hr)s?/);
+  if(m){
+    const n = parseInt(m[1]);
+    const d = new Date(Date.now() + n * (m[2].startsWith('h') ? 3600000 : 60000));
+    return { hour: d.getHours(), minute: d.getMinutes(), label: `In ${n} ${m[2].startsWith('h')?'hour':'min'}${n>1?'s':''}` };
+  }
+
+  // explicit time like "7:30 am", "7 30 pm", "7 am", "19:00", "seven thirty"
+  m = text.match(/(\d{1,2})[:. ]?(\d{2})?\s*(am|pm)?/);
+  if(m){
+    let hour = parseInt(m[1]);
+    let minute = m[2] ? parseInt(m[2]) : 0;
+    const period = m[3];
+    if(period === 'pm' && hour < 12) hour += 12;
+    if(period === 'am' && hour === 12) hour = 0;
+    if(!period && hour <= 7 && !text.includes('morning') && hour !== 0){
+      // ambiguous small hour with no am/pm — leave as-is (assume as stated)
+    }
+    if(hour >= 0 && hour <= 23 && minute >=0 && minute <=59){
+      let label = 'Alarm';
+      if(text.includes('work')) label = 'Work';
+      if(text.includes('gym')) label = 'Gym';
+      if(text.includes('meeting')) label = 'Meeting';
+      return { hour, minute, label };
+    }
+  }
+  return null;
+}
+
+function handleVoiceResult(transcript){
+  document.getElementById('micHint').innerHTML = `Heard: <b>"${transcript}"</b>`;
+  const parsed = parseTimeFromSpeech(transcript);
+  if(parsed){
+    addAlarm(parsed.hour, parsed.minute, parsed.label);
+    setTimeout(()=>{
+      document.getElementById('micHint').innerHTML = `Alarm set for <b>${fmt(parsed.hour,parsed.minute)}</b> ✓`;
+    }, 300);
+  } else {
+    document.getElementById('micHint').innerHTML = `Didn't catch a time — try <b>"set alarm for 7 AM"</b>`;
+  }
+}
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = document.getElementById('micBtn');
+const srNote = document.getElementById('srNote');
+
+if(!SpeechRecognition){
+  srNote.textContent = 'Voice recognition isn\'t supported in this browser — use the text box below instead.';
+} else {
+  const recog = new SpeechRecognition();
+  recog.lang = 'en-US';
+  recog.interimResults = false;
+  recog.maxAlternatives = 1;
+
+  micBtn.addEventListener('click', ()=>{
+    try{
+      recog.start();
+      micBtn.classList.add('listening');
+      document.getElementById('micHint').textContent = 'Listening…';
+    }catch(e){ /* already started */ }
+  });
+
+  recog.onresult = (event)=>{
+    const transcript = event.results[0][0].transcript;
+    handleVoiceResult(transcript);
+  };
+  recog.onerror = (event)=>{
+    document.getElementById('micHint').textContent = 'Couldn\'t hear that — tap the mic to try again.';
+  };
+  recog.onend = ()=>{
+    micBtn.classList.remove('listening');
+  };
+}
+
+document.getElementById('typeGo').addEventListener('click', ()=>{
+  const val = document.getElementById('typeInput').value;
+  if(val.trim()){ handleVoiceResult(val); document.getElementById('typeInput').value=''; }
+});
+document.getElementById('typeInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('typeGo').click();
+});
+
+// service worker for installability (ignored gracefully if unsupported/blocked)
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+render();
+</script>
+</body>
+</html>
